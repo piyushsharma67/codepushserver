@@ -1,6 +1,7 @@
 package database
 
 import (
+	"github.com/google/uuid"
 	"github.com/piyushsharma67/codepushserver/config"
 	"github.com/piyushsharma67/codepushserver/models"
 )
@@ -14,10 +15,24 @@ type Database interface {
 	CreateUser(user *models.User) error
 	FindUserByID(id uint) (*models.User, error)
 	FindUserByEmail(email string) (*models.User, error)
-	FindUserByAppID(appID string) (*models.User, error)
-	FindUserByToken(token string) (*models.User, error)
 	UpdateUser(user *models.User) error
-	DeleteUser(id uint) error
+
+	// Organization methods
+	CreateOrganization(org *models.Organization) error
+	FindOrganizationByID(id uuid.UUID) (*models.Organization, error)
+	FindOrganizationsByUserID(userID uint) ([]*models.Organization, error)
+	DeleteOrganization(id uuid.UUID) error
+
+	// Organization member methods
+	CreateOrganizationMember(member *models.OrganizationMember) error
+	FindOrganizationMember(orgID uuid.UUID, userID uint) (*models.OrganizationMember, error)
+	UpdateOrganizationMember(member *models.OrganizationMember) error
+
+	// Organization invitation methods
+	CreateOrganizationInvitation(invitation *models.OrganizationInvitation) error
+	FindOrganizationInvitationByID(id uuid.UUID) (*models.OrganizationInvitation, error)
+	FindPendingInvitationsByEmail(email string) ([]*models.OrganizationInvitation, error)
+	UpdateOrganizationInvitation(invitation *models.OrganizationInvitation) error
 
 	// App methods
 	CreateApp(app *models.App) error

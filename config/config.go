@@ -6,24 +6,32 @@ import (
 )
 
 type Config struct {
-	DBHost     string
-	DBPort     int
-	DBUser     string
-	DBPassword string
-	DBName     string
-	DBType     string
-	JWTSecret  string
+	// Server configuration
+	Port     int    `json:"port"`
+	Host     string `json:"host"`
+	DBType   string `json:"db_type"`
+	DBHost   string `json:"db_host"`
+	DBPort   int    `json:"db_port"`
+	DBUser   string `json:"db_user"`
+	DBPassword string `json:"db_password"`
+	DBName   string `json:"db_name"`
+	JWTKey   string `json:"jwt_key"`
+	JWTExpiry int    `json:"jwt_expiry"`
 }
 
-func LoadConfig() *Config {
+func NewConfig() *Config {
+	port, _ := strconv.Atoi(getEnv("DB_PORT", "5432"))
 	return &Config{
-		DBHost:     getEnv("DB_HOST", "localhost"),
-		DBPort:     getEnvAsInt("DB_PORT", 5432),
-		DBUser:     getEnv("DB_USER", "postgres"),
-		DBPassword: getEnv("DB_PASSWORD", ""),
-		DBName:     getEnv("DB_NAME", "codepush"),
-		DBType:     getEnv("DB_TYPE", "postgres"),
-		JWTSecret:  getEnv("JWT_SECRET", "your-secret-key"),
+		Port:     8080,
+		Host:     "localhost",
+		DBType:   getEnv("DB_TYPE", "postgres"),
+		DBHost:   getEnv("DB_HOST", "localhost"),
+		DBPort:   port,
+		DBUser:   getEnv("DB_USER", "postgres"),
+		DBPassword: getEnv("DB_PASSWORD", "postgres"),
+		DBName:   getEnv("DB_NAME", "codepush"),
+		JWTKey:   "your-secret-key",
+		JWTExpiry: 24, // hours
 	}
 }
 

@@ -8,6 +8,7 @@ type App struct {
 	Name        string    `json:"name" gorm:"not null"`
 	Description string    `json:"description"`
 	Platform    string    `json:"platform" gorm:"not null"`
+	Token       string    `json:"token" gorm:"unique;not null"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 } 

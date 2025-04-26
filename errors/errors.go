@@ -3,9 +3,10 @@ package errors
 import "errors"
 
 var (
-	ErrUserAlreadyExists  = errors.New("user already exists")
+	ErrInternal           = errors.New("internal server error")
 	ErrInvalidCredentials = errors.New("invalid credentials")
+	ErrUserAlreadyExists  = errors.New("user already exists")
 	ErrNotFound           = errors.New("resource not found")
-	ErrUnauthorized      = errors.New("unauthorized")
-	ErrInternal          = errors.New("internal server error")
+	ErrForbidden          = errors.New("forbidden")
+	ErrInvalidRequest     = errors.New("invalid request")
 ) 

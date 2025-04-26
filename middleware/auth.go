@@ -1,12 +1,12 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/piyushsharma67/codepushserver/config"
+	"github.com/piyushsharma67/codepushserver/services"
 )
 
 func AuthMiddleware() gin.HandlerFunc {
@@ -18,30 +18,27 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// Extract token from Bearer
-		tokenString := strings.Replace(authHeader, "Bearer ", "", 1)
-		if tokenString == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token format"})
+		// Check if the header has the Bearer prefix
+		parts := strings.Split(authHeader, " ")
+		if len(parts) != 2 || parts[0] != "Bearer" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization header format"})
 			c.Abort()
 			return
 		}
 
-		// Parse and validate token
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-			return []byte(config.LoadConfig().JWTSecret), nil
-		})
+		// Validate the token
+		jwtService := services.NewJWTService()
+		userID, err := jwtService.ValidateToken(parts[1])
 
-		if err != nil || !token.Valid {
+		fmt.Println("userID**", userID)
+		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			c.Abort()
 			return
 		}
 
 		// Set user ID in context
-		if claims, ok := token.Claims.(jwt.MapClaims); ok {
-			c.Set("userID", claims["user_id"])
-		}
-
+		c.Set("user_id", userID)
 		c.Next()
 	}
 } 

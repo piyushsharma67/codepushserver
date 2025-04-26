@@ -1,29 +1,35 @@
 package v1
 
 import (
+	"crypto/rand"
+	"math/big"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/piyushsharma67/codepushserver/config"
 	"github.com/piyushsharma67/codepushserver/database"
 	"github.com/piyushsharma67/codepushserver/models"
+	"github.com/piyushsharma67/codepushserver/services"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthHandler struct {
-	db database.Database
+	db         database.Database
+	jwtService *services.JWTService
 }
 
 func NewAuthHandler(db database.Database) *AuthHandler {
-	return &AuthHandler{db: db}
+	return &AuthHandler{
+		db:         db,
+		jwtService: services.NewJWTService(),
+	}
 }
 
 type RegisterRequest struct {
-	Username string `json:"username" binding:"required"`
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=6"`
+	Username    string `json:"username" binding:"required"`
+	Email       string `json:"email" binding:"required,email"`
+	Password    string `json:"password" binding:"required,min=8"`
+	CompanyName string `json:"company_name"`
+	PhoneNumber string `json:"phone_number"`
 }
 
 type LoginRequest struct {
@@ -52,17 +58,13 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	// Generate app ID and token
-	appID := generateRandomString(32)
-	token := generateRandomString(64)
-
 	// Create user
 	user := &models.User{
-		Username: req.Username,
-		Email:    req.Email,
-		Password: string(hashedPassword),
-		AppID:    appID,
-		Token:    token,
+		Username:    req.Username,
+		Email:       req.Email,
+		Password:    string(hashedPassword),
+		CompanyName: req.CompanyName,
+		PhoneNumber: req.PhoneNumber,
 	}
 
 	if err := h.db.CreateUser(user); err != nil {
@@ -70,10 +72,23 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
+	// Generate JWT token
+	token, expiresAt, err := h.jwtService.GenerateToken(user.ID, user.Email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		return
+	}
+
 	c.JSON(http.StatusCreated, gin.H{
-		"message": "User created successfully",
-		"app_id":  appID,
-		"token":   token,
+		"token":     token,
+		"expires_at": expiresAt,
+		"user": gin.H{
+			"id":           user.ID,
+			"username":     user.Username,
+			"email":        user.Email,
+			"company_name": user.CompanyName,
+			"created_at":   user.CreatedAt,
+		},
 	})
 }
 
@@ -98,24 +113,21 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	// Generate JWT token
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id": user.ID,
-		"exp":     time.Now().Add(time.Hour * 24).Unix(),
-	})
-
-	tokenString, err := token.SignedString([]byte(config.LoadConfig().JWTSecret))
+	token, expiresAt, err := h.jwtService.GenerateToken(user.ID, user.Email)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"token": tokenString,
+		"token":     token,
+		"expires_at": expiresAt,
 		"user": gin.H{
-			"id":      user.ID,
-			"email":   user.Email,
-			"app_id":  user.AppID,
-			"token":   user.Token,
+			"id":           user.ID,
+			"username":     user.Username,
+			"email":        user.Email,
+			"company_name": user.CompanyName,
+			"created_at":   user.CreatedAt,
 		},
 	})
 }
@@ -124,7 +136,8 @@ func generateRandomString(length int) string {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	result := make([]byte, length)
 	for i := range result {
-		result[i] = charset[time.Now().UnixNano()%int64(len(charset))]
+		num, _ := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		result[i] = charset[num.Int64()]
 	}
 	return string(result)
-} 
+}
